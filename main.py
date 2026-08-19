@@ -1,37 +1,31 @@
 import discord
 from discord.ext import commands
 import asyncio
-import threading
 import os
 
-# Yerelde test ederken .env okusun, Railway'de doğrudan sistem değişkenlerini kullansın
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
     pass
 
-# Railway Variables panelinden çekilen bilgiler
 TOKEN_1 = os.getenv("TOKEN_1")
 TOKEN_2 = os.getenv("TOKEN_2")
 OWNER_ID = os.getenv("OWNER_ID")
 
-# Güvenlik kontrolü
 if not TOKEN_1 or not TOKEN_2 or not OWNER_ID:
-    print("⚠️ UYARI: TOKEN_1, TOKEN_2 veya OWNER_ID eksik! Lütfen Railway Variables kısmını kontrol et.")
+    print("⚠️ UYARI: TOKEN_1, TOKEN_2 veya OWNER_ID eksik!")
 else:
-    # Güvenlik için OWNER_ID'yi tam sayıya (integer) çeviriyoruz
     OWNER_ID = int(OWNER_ID)
 
-# İki ayrı bot (client) nesnesi oluşturuyoruz
+# İki ayrı bot nesnesi
 bot1 = commands.Bot(command_prefix="!", self_bot=True, help_command=None)
 bot2 = commands.Bot(command_prefix="!", self_bot=True, help_command=None)
 
-# Her hesap için ayrı hedef kanal ID değişkenleri
 TARGET_CHANNEL_ID_1 = None
 TARGET_CHANNEL_ID_2 = None
 
-# ================= 1. HESAP İŞLEMLERİ =================
+# ================= 1. HESAP =================
 
 async def join_channel_1():
     global TARGET_CHANNEL_ID_1
@@ -68,7 +62,6 @@ async def on_voice_state_update(member, before, after):
 
 @bot1.command(name="yardim1")
 async def cmd_yardim1(ctx):
-    # Sadece OWNER_ID komut verebilir
     if ctx.author.id != OWNER_ID:
         return
     global TARGET_CHANNEL_ID_1
@@ -92,12 +85,12 @@ async def cmd_ayarla1(ctx, channel_id: int = None):
         return
     global TARGET_CHANNEL_ID_1
     if not channel_id:
-        await ctx.message.edit(content="❌ Lütfen geçerli bir Kanal ID'si yaz! Örnek: `!ayarla1 12345`")
+        await ctx.message.edit(content="❌ Lütfen geçerli bir Kanal ID'si yaz!")
         return
     TARGET_CHANNEL_ID_1 = channel_id
     channel = bot1.get_channel(TARGET_CHANNEL_ID_1)
     if channel:
-        await ctx.message.edit(content=f"✅ 1. Hesap için kanal ayarlandı ve bağlanıldı: **{channel.name}**")
+        await ctx.message.edit(content=f"✅ 1. Hesap için kanal ayarlandı: **{channel.name}**")
         await join_channel_1()
     else:
         await ctx.message.edit(content="❌ Hata: Bu ID ile kanal bulunamadı!")
@@ -120,10 +113,10 @@ async def cmd_cik1(ctx):
     TARGET_CHANNEL_ID_1 = None
     for vc in bot1.voice_clients:
         await vc.disconnect()
-    await ctx.message.edit(content="🚪 1. Hesap sesten çıktı ve otomatik bağlama durduruldu.")
+    await ctx.message.edit(content="🚪 1. Hesap sesten çıktı.")
 
 
-# ================= 2. HESAP İŞLEMLERİ =================
+# ================= 2. HESAP =================
 
 async def join_channel_2():
     global TARGET_CHANNEL_ID_2
@@ -160,7 +153,6 @@ async def on_voice_state_update(member, before, after):
 
 @bot2.command(name="yardim2")
 async def cmd_yardim2(ctx):
-    # OWNER_ID kontrolü (2. botu da sadece ana hesabın kontrol edebilir)
     if ctx.author.id != OWNER_ID:
         return
     global TARGET_CHANNEL_ID_2
@@ -184,12 +176,12 @@ async def cmd_ayarla2(ctx, channel_id: int = None):
         return
     global TARGET_CHANNEL_ID_2
     if not channel_id:
-        await ctx.message.edit(content="❌ Lütfen geçerli bir Kanal ID'si yaz! Örnek: `!ayarla2 12345`")
+        await ctx.message.edit(content="❌ Lütfen geçerli bir Kanal ID'si yaz!")
         return
     TARGET_CHANNEL_ID_2 = channel_id
     channel = bot2.get_channel(TARGET_CHANNEL_ID_2)
     if channel:
-        await ctx.message.edit(content=f"✅ 2. Hesap için kanal ayarlandı ve bağlanıldı: **{channel.name}**")
+        await ctx.message.edit(content=f"✅ 2. Hesap için kanal ayarlandı: **{channel.name}**")
         await join_channel_2()
     else:
         await ctx.message.edit(content="❌ Hata: Bu ID ile kanal bulunamadı!")
@@ -212,22 +204,17 @@ async def cmd_cik2(ctx):
     TARGET_CHANNEL_ID_2 = None
     for vc in bot2.voice_clients:
         await vc.disconnect()
-    await ctx.message.edit(content="🚪 2. Hesap sesten çıktı ve otomatik bağlama durduruldu.")
+    await ctx.message.edit(content="🚪 2. Hesap sesten çıktı.")
 
 
-# ================= ÇİFT HESAP BAŞLATICI =================
+# ================= ASENKRON BAŞLATICI =================
 
-def run_bot1():
-    if TOKEN_1:
-        bot1.run(TOKEN_1)
-
-def run_bot2():
-    if TOKEN_2:
-        bot2.run(TOKEN_2)
+async def main():
+    async with bot1, bot2:
+        await asyncio.gather(
+            bot1.start(TOKEN_1),
+            bot2.start(TOKEN_2)
+        )
 
 if __name__ == "__main__":
-    t1 = threading.Thread(target=run_bot1)
-    t2 = threading.Thread(target=run_bot2)
-    
-    t1.start()
-    t2.start()
+    asyncio.run(main())
