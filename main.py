@@ -18,7 +18,6 @@ if not TOKEN_1 or not TOKEN_2 or not OWNER_ID:
 else:
     OWNER_ID = int(OWNER_ID)
 
-# İki ayrı bot nesnesi
 bot1 = commands.Bot(command_prefix="!", self_bot=True, help_command=None)
 bot2 = commands.Bot(command_prefix="!", self_bot=True, help_command=None)
 
@@ -32,17 +31,20 @@ async def join_channel_1():
     if not TARGET_CHANNEL_ID_1:
         return
     await bot1.wait_until_ready()
-    channel = bot1.get_channel(TARGET_CHANNEL_ID_1)
-    if channel:
-        try:
+    try:
+        channel = bot1.get_channel(TARGET_CHANNEL_ID_1)
+        if not channel:
+            channel = await bot1.fetch_channel(TARGET_CHANNEL_ID_1)
+            
+        if channel:
             if bot1.voice_clients and bot1.voice_clients[0].channel and bot1.voice_clients[0].channel.id == TARGET_CHANNEL_ID_1:
                 return
             for vc in bot1.voice_clients:
                 await vc.disconnect()
             await channel.connect(self_deaf=True, self_mute=True)
             print(f"[Hesap 1] Başarıyla {channel.name} kanalına girildi.")
-        except Exception as e:
-            print(f"[Hesap 1] Bağlantı hatası: {e}")
+    except Exception as e:
+        print(f"[Hesap 1] Bağlantı hatası: {e}")
 
 @bot1.event
 async def on_ready():
@@ -88,12 +90,15 @@ async def cmd_ayarla1(ctx, channel_id: int = None):
         await ctx.message.edit(content="❌ Lütfen geçerli bir Kanal ID'si yaz!")
         return
     TARGET_CHANNEL_ID_1 = channel_id
-    channel = bot1.get_channel(TARGET_CHANNEL_ID_1)
-    if channel:
-        await ctx.message.edit(content=f"✅ 1. Hesap için kanal ayarlandı: **{channel.name}**")
-        await join_channel_1()
-    else:
-        await ctx.message.edit(content="❌ Hata: Bu ID ile kanal bulunamadı!")
+    try:
+        channel = bot1.get_channel(TARGET_CHANNEL_ID_1) or await bot1.fetch_channel(TARGET_CHANNEL_ID_1)
+        if channel:
+            await ctx.message.edit(content=f"✅ 1. Hesap için kanal ayarlandı: **{channel.name}**")
+            await join_channel_1()
+        else:
+            await ctx.message.edit(content="❌ Hata: Bu ID ile kanal bulunamadı!")
+    except Exception as e:
+        await ctx.message.edit(content=f"❌ Kanal bulunamadı! Hata: `{e}`")
 
 @bot1.command(name="gir1")
 async def cmd_gir1(ctx):
@@ -123,17 +128,20 @@ async def join_channel_2():
     if not TARGET_CHANNEL_ID_2:
         return
     await bot2.wait_until_ready()
-    channel = bot2.get_channel(TARGET_CHANNEL_ID_2)
-    if channel:
-        try:
+    try:
+        channel = bot2.get_channel(TARGET_CHANNEL_ID_2)
+        if not channel:
+            channel = await bot2.fetch_channel(TARGET_CHANNEL_ID_2)
+            
+        if channel:
             if bot2.voice_clients and bot2.voice_clients[0].channel and bot2.voice_clients[0].channel.id == TARGET_CHANNEL_ID_2:
                 return
             for vc in bot2.voice_clients:
                 await vc.disconnect()
             await channel.connect(self_deaf=True, self_mute=True)
             print(f"[Hesap 2] Başarıyla {channel.name} kanalına girildi.")
-        except Exception as e:
-            print(f"[Hesap 2] Bağlantı hatası: {e}")
+    except Exception as e:
+        print(f"[Hesap 2] Bağlantı hatası: {e}")
 
 @bot2.event
 async def on_ready():
@@ -179,12 +187,15 @@ async def cmd_ayarla2(ctx, channel_id: int = None):
         await ctx.message.edit(content="❌ Lütfen geçerli bir Kanal ID'si yaz!")
         return
     TARGET_CHANNEL_ID_2 = channel_id
-    channel = bot2.get_channel(TARGET_CHANNEL_ID_2)
-    if channel:
-        await ctx.message.edit(content=f"✅ 2. Hesap için kanal ayarlandı: **{channel.name}**")
-        await join_channel_2()
-    else:
-        await ctx.message.edit(content="❌ Hata: Bu ID ile kanal bulunamadı!")
+    try:
+        channel = bot2.get_channel(TARGET_CHANNEL_ID_2) or await bot2.fetch_channel(TARGET_CHANNEL_ID_2)
+        if channel:
+            await ctx.message.edit(content=f"✅ 2. Hesap için kanal ayarlandı: **{channel.name}**")
+            await join_channel_2()
+        else:
+            await ctx.message.edit(content="❌ Hata: Bu ID ile kanal bulunamadı!")
+    except Exception as e:
+        await ctx.message.edit(content=f"❌ Kanal bulunamadı! Hata: `{e}`")
 
 @bot2.command(name="gir2")
 async def cmd_gir2(ctx):
