@@ -1,18 +1,18 @@
 import os
+import asyncio
 import discord
 from discord.ext import commands
 
-# Self-bot istemcisini oluşturuyoruz (self_bot=True burada kritik)
 bot = commands.Bot(command_prefix="!", self_bot=True)
-
-# Token'ı Railway Environment Variables (Variables) kısmından alıyoruz
 TOKEN = os.getenv("TOKEN")
 
 @bot.event
 async def on_ready():
     print(f"Giriş yapıldı: {bot.user} (ID: {bot.user.id})")
     
-    # Sese bağlanmak istediğin kanalın ID'si
+    # Gateway ve önbelleğin tamamen oturması için 3 saniye bekliyoruz
+    await asyncio.sleep(3)
+    
     CHANNEL_ID = 1536785743014527076  
     
     try:
@@ -25,9 +25,8 @@ async def on_ready():
     except Exception as e:
         print(f"Bağlantı hatası: {e}")
 
-# Token kontrolü ekleyerek güvenliği artırıyoruz
 if __name__ == "__main__":
     if not TOKEN:
-        print("HATA: TOKEN çevresel değişkeni (environment variable) bulunamadı!")
+        print("HATA: TOKEN çevresel değişkeni bulunamadı!")
     else:
         bot.run(TOKEN)
