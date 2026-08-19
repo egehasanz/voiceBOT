@@ -10,21 +10,15 @@ except ImportError:
     pass
 
 TOKEN_1 = os.getenv("TOKEN_1")
-TOKEN_2 = os.getenv("TOKEN_2")
 OWNER_ID = os.getenv("OWNER_ID")
 
-if not TOKEN_1 or not TOKEN_2 or not OWNER_ID:
-    print("⚠️ UYARI: TOKEN_1, TOKEN_2 veya OWNER_ID eksik!")
+if not TOKEN_1 or not OWNER_ID:
+    print("⚠️ UYARI: TOKEN_1 veya OWNER_ID eksik!")
 else:
     OWNER_ID = int(OWNER_ID)
 
 bot1 = commands.Bot(command_prefix="!", self_bot=True, help_command=None)
-bot2 = commands.Bot(command_prefix="!", self_bot=True, help_command=None)
-
 TARGET_CHANNEL_ID_1 = None
-TARGET_CHANNEL_ID_2 = None
-
-# ================= 1. HESAP =================
 
 async def join_channel_1():
     global TARGET_CHANNEL_ID_1
@@ -32,57 +26,43 @@ async def join_channel_1():
         return
     await bot1.wait_until_ready()
     try:
-        channel = bot1.get_channel(TARGET_CHANNEL_ID_1)
-        if not channel:
-            channel = await bot1.fetch_channel(TARGET_CHANNEL_ID_1)
-            
+        channel = bot1.get_channel(TARGET_CHANNEL_ID_1) or await bot1.fetch_channel(TARGET_CHANNEL_ID_1)
         if channel:
-            if bot1.voice_clients and bot1.voice_clients[0].channel and bot1.voice_clients[0].channel.id == TARGET_CHANNEL_ID_1:
-                return
-            for vc in bot1.voice_clients:
+            if bot1.voice_clients:
+                vc = bot1.voice_clients[0]
+                if vc.channel and vc.channel.id == TARGET_CHANNEL_ID_1 and vc.is_connected():
+                    return
                 await vc.disconnect()
+            
             await channel.connect(self_deaf=True, self_mute=True)
-            print(f"[Hesap 1] Başarıyla {channel.name} kanalına girildi.")
+            print(f"[Hesap 1] {channel.name} kanalına bağlanıldı.")
     except Exception as e:
         print(f"[Hesap 1] Bağlantı hatası: {e}")
 
 @bot1.event
 async def on_ready():
-    print(f"1. Hesap Giriş Yaptı: {bot1.user} (ID: {bot1.user.id})")
+    print(f"Bot Giriş Yaptı: {bot1.user}")
 
-@bot1.event
-async def on_voice_state_update(member, before, after):
-    global TARGET_CHANNEL_ID_1
-    if not TARGET_CHANNEL_ID_1:
-        return
-    if member.id == bot1.user.id:
-        if after.channel and after.channel.id == TARGET_CHANNEL_ID_1:
-            return
-        print("[Hesap 1] Sesten düşüldü, tekrar bağlanılıyor...")
-        await asyncio.sleep(2)
-        await join_channel_1()
-
-@bot1.command(name="yardim1")
-async def cmd_yardim1(ctx):
+@bot1.command(name="yardim")
+async def cmd_yardim(ctx):
     if ctx.author.id != OWNER_ID:
         return
     global TARGET_CHANNEL_ID_1
-    kanal_durumu = f"<#{TARGET_CHANNEL_ID_1}> (ID: `{TARGET_CHANNEL_ID_1}`)" if TARGET_CHANNEL_ID_1 else "❌ *Ayarlanmadı!*"
-    
+    kd = f"<#{TARGET_CHANNEL_ID_1}>" if TARGET_CHANNEL_ID_1 else "❌ *Ayarlanmadı!*"
     panel = (
-        "**🎛️ 1. Hesap Kontrol Paneli**\n"
+        "**🎛️ Ses Botu Kontrol Paneli**\n"
         "──────────────────────────────\n"
-        f"📍 **Kanal:** {kanal_durumu}\n\n"
+        f"📍 **Kanal:** {kd}\n\n"
         "🛠️ **Komutlar:**\n"
-        "`!ayarla1 <id>` - 1. hesap kanalını seçer.\n"
-        "`!gir1` - 1. hesabı sese sokar.\n"
-        "`!cik1` - 1. hesabı sesten çıkarır.\n"
+        "`!ayarla <id>` - Hedef kanalı seçer ve bağlanır.\n"
+        "`!gir` - Sese giriş yapar.\n"
+        "`!cik` - Sesten çıkar.\n"
         "──────────────────────────────"
     )
     await ctx.message.edit(content=panel)
 
-@bot1.command(name="ayarla1")
-async def cmd_ayarla1(ctx, channel_id: int = None):
+@bot1.command(name="ayarla")
+async def cmd_ayarla(ctx, channel_id: int = None):
     if ctx.author.id != OWNER_ID:
         return
     global TARGET_CHANNEL_ID_1
@@ -90,142 +70,43 @@ async def cmd_ayarla1(ctx, channel_id: int = None):
         await ctx.message.edit(content="❌ Lütfen geçerli bir Kanal ID'si yaz!")
         return
     TARGET_CHANNEL_ID_1 = channel_id
-    try:
-        channel = bot1.get_channel(TARGET_CHANNEL_ID_1) or await bot1.fetch_channel(TARGET_CHANNEL_ID_1)
-        if channel:
-            await ctx.message.edit(content=f"✅ 1. Hesap için kanal ayarlandı: **{channel.name}**")
-            await join_channel_1()
-        else:
-            await ctx.message.edit(content="❌ Hata: Bu ID ile kanal bulunamadı!")
-    except Exception as e:
-        await ctx.message.edit(content=f"❌ Kanal bulunamadı! Hata: `{e}`")
+    await join_channel_1()
+    await ctx.message.edit(content=f"✅ Kanal ayarlandı ve bağlanıldı.")
 
-@bot1.command(name="gir1")
-async def cmd_gir1(ctx):
+@bot1.command(name="gir")
+async def cmd_gir(ctx):
     if ctx.author.id != OWNER_ID:
         return
     if not TARGET_CHANNEL_ID_1:
-        await ctx.message.edit(content="❌ Önce kanal ayarlamalısın: `!ayarla1 <id>`")
+        await ctx.message.edit(content="❌ Önce kanal ayarlamalısın: `!ayarla <id>`")
         return
     await join_channel_1()
-    await ctx.message.edit(content="✅ 1. Hesap sese giriş yaptı.")
+    await ctx.message.edit(content=f"✅ Sese giriş yapıldı.")
 
-@bot1.command(name="cik1")
-async def cmd_cik1(ctx):
+@bot1.command(name="cik")
+async def cmd_cik(ctx):
     if ctx.author.id != OWNER_ID:
         return
     global TARGET_CHANNEL_ID_1
     TARGET_CHANNEL_ID_1 = None
     for vc in bot1.voice_clients:
         await vc.disconnect()
-    await ctx.message.edit(content="🚪 1. Hesap sesten çıktı.")
+    await ctx.message.edit(content="🚪 Sesten çıkıldı.")
 
-
-# ================= 2. HESAP =================
-
-async def join_channel_2():
-    global TARGET_CHANNEL_ID_2
-    if not TARGET_CHANNEL_ID_2:
-        return
-    await bot2.wait_until_ready()
-    try:
-        channel = bot2.get_channel(TARGET_CHANNEL_ID_2)
-        if not channel:
-            channel = await bot2.fetch_channel(TARGET_CHANNEL_ID_2)
-            
-        if channel:
-            if bot2.voice_clients and bot2.voice_clients[0].channel and bot2.voice_clients[0].channel.id == TARGET_CHANNEL_ID_2:
-                return
-            for vc in bot2.voice_clients:
-                await vc.disconnect()
-            await channel.connect(self_deaf=True, self_mute=True)
-            print(f"[Hesap 2] Başarıyla {channel.name} kanalına girildi.")
-    except Exception as e:
-        print(f"[Hesap 2] Bağlantı hatası: {e}")
-
-@bot2.event
-async def on_ready():
-    print(f"2. Hesap Giriş Yaptı: {bot2.user} (ID: {bot2.user.id})")
-
-@bot2.event
-async def on_voice_state_update(member, before, after):
-    global TARGET_CHANNEL_ID_2
-    if not TARGET_CHANNEL_ID_2:
-        return
-    if member.id == bot2.user.id:
-        if after.channel and after.channel.id == TARGET_CHANNEL_ID_2:
-            return
-        print("[Hesap 2] Sesten düşüldü, tekrar bağlanılıyor...")
-        await asyncio.sleep(2)
-        await join_channel_2()
-
-@bot2.command(name="yardim2")
-async def cmd_yardim2(ctx):
-    if ctx.author.id != OWNER_ID:
-        return
-    global TARGET_CHANNEL_ID_2
-    kanal_durumu = f"<#{TARGET_CHANNEL_ID_2}> (ID: `{TARGET_CHANNEL_ID_2}`)" if TARGET_CHANNEL_ID_2 else "❌ *Ayarlanmadı!*"
-    
-    panel = (
-        "**🎛️ 2. Hesap Kontrol Paneli**\n"
-        "──────────────────────────────\n"
-        f"📍 **Kanal:** {kanal_durumu}\n\n"
-        "🛠️ **Komutlar:**\n"
-        "`!ayarla2 <id>` - 2. hesap kanalını seçer.\n"
-        "`!gir2` - 2. hesabı sese sokar.\n"
-        "`!cik2` - 2. hesabı sesten çıkarır.\n"
-        "──────────────────────────────"
-    )
-    await ctx.message.edit(content=panel)
-
-@bot2.command(name="ayarla2")
-async def cmd_ayarla2(ctx, channel_id: int = None):
-    if ctx.author.id != OWNER_ID:
-        return
-    global TARGET_CHANNEL_ID_2
-    if not channel_id:
-        await ctx.message.edit(content="❌ Lütfen geçerli bir Kanal ID'si yaz!")
-        return
-    TARGET_CHANNEL_ID_2 = channel_id
-    try:
-        channel = bot2.get_channel(TARGET_CHANNEL_ID_2) or await bot2.fetch_channel(TARGET_CHANNEL_ID_2)
-        if channel:
-            await ctx.message.edit(content=f"✅ 2. Hesap için kanal ayarlandı: **{channel.name}**")
-            await join_channel_2()
-        else:
-            await ctx.message.edit(content="❌ Hata: Bu ID ile kanal bulunamadı!")
-    except Exception as e:
-        await ctx.message.edit(content=f"❌ Kanal bulunamadı! Hata: `{e}`")
-
-@bot2.command(name="gir2")
-async def cmd_gir2(ctx):
-    if ctx.author.id != OWNER_ID:
-        return
-    if not TARGET_CHANNEL_ID_2:
-        await ctx.message.edit(content="❌ Önce kanal ayarlamalısın: `!ayarla2 <id>`")
-        return
-    await join_channel_2()
-    await ctx.message.edit(content="✅ 2. Hesap sese giriş yaptı.")
-
-@bot2.command(name="cik2")
-async def cmd_cik2(ctx):
-    if ctx.author.id != OWNER_ID:
-        return
-    global TARGET_CHANNEL_ID_2
-    TARGET_CHANNEL_ID_2 = None
-    for vc in bot2.voice_clients:
-        await vc.disconnect()
-    await ctx.message.edit(content="🚪 2. Hesap sesten çıktı.")
-
-
-# ================= ASENKRON BAŞLATICI =================
+async def keep_alive_task():
+    while True:
+        await asyncio.sleep(15)
+        for vc in bot1.voice_clients:
+            if vc and vc.is_connected():
+                try:
+                    await vc.ws.speak(True)
+                except:
+                    pass
 
 async def main():
-    async with bot1, bot2:
-        await asyncio.gather(
-            bot1.start(TOKEN_1),
-            bot2.start(TOKEN_2)
-        )
+    asyncio.create_task(keep_alive_task())
+    async with bot1:
+        await bot1.start(TOKEN_1)
 
 if __name__ == "__main__":
     asyncio.run(main())
