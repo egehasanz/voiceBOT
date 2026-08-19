@@ -13,7 +13,7 @@ async def on_ready():
     # Gateway ve önbelleğin tamamen oturması için 3 saniye bekliyoruz
     await asyncio.sleep(3)
     
-    CHANNEL_ID = 1536785743014527076  
+    CHANNEL_ID = 1486461566554472579  
     
     try:
         channel = bot.get_channel(CHANNEL_ID)
